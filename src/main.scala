@@ -8,7 +8,9 @@ import scala.io._
 
 object main {
   def main(args: Array[String]) {
-    val uri = "https://www.navitime.co.jp/diagram/timetable?node=00007965&lineId=00000123";
+    val uri = "https://www.navitime.co.jp/diagram/timetable?node=00007965&lineId=00000123"
+    //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00000296&lineId=00000190&updown=0"
+    //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00007970&lineId=00000192"
 
     val doc = Jsoup.connect(uri).get
 
@@ -21,7 +23,6 @@ object main {
     val divEle = doc.getElementById(divEleStr)
 
     val dlEles = divEle.child(0).children
-    println(dlEles)
     // ～時台，ごとに切り出す
     val nameTimeTupleListListBuf = for (dlEle <- dlEles) yield {
       //println(dlEle.text)
@@ -34,19 +35,19 @@ object main {
       }
       nameTimeTupleListBuf.toList
     }
-    // このテーブルに含まれるすべてのバスの停車駅と時刻の組を取得
+    // このテーブルに含まれるすべての列車の停車駅と時刻の組を取得
     val nameTimeTable = nameTimeTupleListListBuf.flatten.toSeq
     //println("All: " + nameTimeTable.size)
 
     val firstNameSeq = createFirstNameSeq(nameTimeTable)
     //println(firstNameSeq)
 
-    // このテーブルに含まれるバスのすべての停車駅のリストを作成
+    // このテーブルに含まれる列車のすべての停車駅のリストを作成
     val allNameSeq = createNameSeq(firstNameSeq, 0, nameTimeTable)
 
     //println(allNameSeq)
 
-    // このテーブルに含まれるバスのすべての停車時刻のリストを作成
+    // このテーブルに含まれる列車のすべての停車時刻のリストを作成
     val timeSeqSeq = for (nameTimeSeq <- nameTimeTable) yield {
       val checkNameSeq = for (nameTimeTuple <- nameTimeSeq) yield {
         nameTimeTuple._1
@@ -56,7 +57,7 @@ object main {
         if (checkNameSeq.contains(name)) {
           val point = checkNameSeq.indexOf(name)
           val time = nameTimeSeq(point)._2
-          // 着発の両方が設定されているバス停があれば，そのバス停の時刻を2つにわける
+          // 着発の両方が設定されている駅があれば，その駅の時刻を2つにわける
           // 片方のみ設定されている場合は，すべて先頭に時刻を入れる
           if (time.contains(" ")) {
             val tmp = time.split(" ")
@@ -76,7 +77,7 @@ object main {
       checkStrEnd(i, timeSeqSeq)
     }
 
-    // 着発表示に合わせてバス停名を調整する
+    // 着発表示に合わせて駅名を調整する
     val allNameTupleSeq2 = for (i <- 0 to allStrEndSeq.size - 1) yield {
       if (allStrEndSeq(i)._2 != "") {
         (allNameSeq(i), allNameSeq(i))
@@ -87,7 +88,7 @@ object main {
 
     // 表示用
     for (nameTuple <- allNameTupleSeq2) {
-      // バス停名の（福井県）や〔東福バス〕などを削除する
+      // 駅名の（福井県）や〔東福バス〕などを削除する
       // （も）も含まない0文字以上の文字列を（）で囲んだ文字列にマッチする正規表現
       // 〔〕も同様の処理
       val rename = nameTuple._1.replaceFirst("（[^（）]*）$", "").replaceFirst("〔[^〔〕]*〕$", "")
@@ -107,11 +108,20 @@ object main {
     }
     println()
     for (timeTupleSeq <- timeSeqSeq) {
-      for (timeTuple <- timeTupleSeq) {
-        if (timeTuple._2 != "") {
-          print(timeTuple._1 + "," + timeTuple._2 + ",")
+      // tupleの先頭にしか時刻が入っていない場合もあるが，
+      // その駅が着発になっている駅の場合もあるので，確認しなければならない
+      for (i <- 0 to allStrEndSeq.size - 1) {
+        // allStrEndSeqが発のみの駅の場合，tupleの先頭だけを表示
+        if (allStrEndSeq(i)._2 == "") {
+          print(timeTupleSeq(i)._1 + ",")
         } else {
-          print(timeTuple._1 + ",")
+          // allStrEndSeqが着発の駅
+          // tupleの発が空の場合，着時刻を発時刻にも入れる
+          if (timeTupleSeq(i)._2 == "") {
+            print(timeTupleSeq(i)._1 + "," + timeTupleSeq(i)._1 + ",")
+          } else {
+            print(timeTupleSeq(i)._1 + "," + timeTupleSeq(i)._2 + ",")
+          }
         }
       }
       println()
@@ -184,10 +194,10 @@ object main {
     }
   }
 
-  // i番目のバス停が着発なのか発だけなのか調べる
-  // 着発の両方が設定されているバス停は("着", "発")を返す
-  // 最後のバス停は("着", "")を返す
-  // それ以外のバス停は("発", "")を返す
+  // i番目の駅が着発なのか発だけなのか調べる
+  // 1本でも着発の両方が設定されている列車のある駅は("着", "発")を返す
+  // 最後の駅は("着", "")を返す
+  // それ以外の駅は("発", "")を返す
   def checkStrEnd(i: Int, timeSeqSeq: Seq[Seq[(String, String)]]): (String, String) = {
     // 検索用に2番目に時刻が入っていればtrue，それ以外はfalseが入ったSeqを作っておく
     val checkStrSeq = for (timeSeq <- timeSeqSeq) yield { if (timeSeq(i)._2 != "") { true } else { false } }
