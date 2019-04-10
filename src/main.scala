@@ -8,8 +8,9 @@ import scala.io._
 
 object main {
   def main(args: Array[String]) {
-    //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00007965&lineId=00000123"
-    val uri = "https://www.navitime.co.jp/diagram/timetable?node=00000296&lineId=00000190&updown=0"
+    val uri = "https://www.navitime.co.jp/diagram/timetable?node=00007965&lineId=00000123"
+    //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00000296&lineId=00000190&updown=0"
+    //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00007970&lineId=00000192"
 
     val doc = Jsoup.connect(uri).get
 
@@ -85,11 +86,6 @@ object main {
       }
     }
 
-    // 着発表示に合わせて各駅の時刻を調整する
-    val timeSeqSeq2 = for (timeTupleSeq <- timeSeqSeq) yield {
-      modifytimeTuple(timeTupleSeq, allStrEndSeq)
-    }
-
     // 表示用
     for (nameTuple <- allNameTupleSeq2) {
       // 駅名の（福井県）や〔東福バス〕などを削除する
@@ -111,14 +107,21 @@ object main {
       }
     }
     println()
-    for (timeTupleSeq <- timeSeqSeq2) {
-      for (timeTuple <- timeTupleSeq) {
-        // 今はtupleの先頭にしか時刻が入っていなければ先頭だけ表示する，となってるが，
-        // その駅が着発になっている駅の場合もあるので，確認しなければならない
-        if (timeTuple._2 != "") {
-          print(timeTuple._1 + "," + timeTuple._2 + ",")
+    for (timeTupleSeq <- timeSeqSeq) {
+      // tupleの先頭にしか時刻が入っていない場合もあるが，
+      // その駅が着発になっている駅の場合もあるので，確認しなければならない
+      for (i <- 0 to allStrEndSeq.size - 1) {
+        // allStrEndSeqが発のみの駅の場合，tupleの先頭だけを表示
+        if (allStrEndSeq(i)._2 == "") {
+          print(timeTupleSeq(i)._1 + ",")
         } else {
-          print(timeTuple._1 + ",")
+          // allStrEndSeqが着発の駅
+          // tupleの発が空の場合，着時刻を発時刻にも入れる
+          if (timeTupleSeq(i)._2 == "") {
+            print(timeTupleSeq(i)._1 + "," + timeTupleSeq(i)._1 + ",")
+          } else {
+            print(timeTupleSeq(i)._1 + "," + timeTupleSeq(i)._2 + ",")
+          }
         }
       }
       println()
@@ -200,24 +203,6 @@ object main {
     val checkStrSeq = for (timeSeq <- timeSeqSeq) yield { if (timeSeq(i)._2 != "") { true } else { false } }
     if (checkStrSeq.contains(true)) { ("着", "発") } else {
       if (i == timeSeqSeq(0).size - 1) { ("着", "") } else { ("発", "") }
-    }
-  }
-
-  // checkStrEndの結果から，i番目の駅が着発なのか発だけなのか確認し，
-  // 着発の駅なのにtupleの後ろがカラになっている場合は，着時刻のコピーを発時刻にも入れる
-  def modifytimeTuple(timeTupleSeq: Seq[(String, String)], allStrEndSeq: Seq[(String, String)]): Seq[(String, String)] = {
-    for (i <- 0 to allStrEndSeq.size - 1) yield {
-      if (allStrEndSeq(i)._2 != "") {
-        // allStrEndSeqが着発の駅なのにtupleの後ろが空の場合は着時刻を発時刻にも入れる
-        if (timeTupleSeq(i)._2 == "") {
-          (timeTupleSeq(i)._1, timeTupleSeq(i)._1)
-        } else {
-          timeTupleSeq(i)
-        }
-      } else {
-        // allStrEndSeqが着発じゃない駅の場合はそのまま返す
-        timeTupleSeq(i)
-      }
     }
   }
 
