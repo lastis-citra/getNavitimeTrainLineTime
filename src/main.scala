@@ -9,10 +9,10 @@ import scala.io._
 object main {
   def main(args: Array[String]) {
     //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00007965&lineId=00000123"
-    //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00006668&lineId=00000185&trainType=&updown=1&time=2019-12-30"
+    val uri = "https://www.navitime.co.jp/diagram/timetable?node=00006668&lineId=00000185&trainType=&updown=1&time=2019-12-30"
     //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00000296&lineId=00000190&updown=0"
     //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00007970&lineId=00000192"
-    val uri = "https://www.navitime.co.jp/diagram/timetable?node=00002012&lineId=00000199&trainType=&updown=1&time=2019-12-30"
+    //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00002012&lineId=00000199&trainType=&updown=1&time=2019-12-30"
 
     val doc = Jsoup.connect(uri).get
 
@@ -20,22 +20,23 @@ object main {
     // 平日は0，土曜は1，日曜は2
     val date = 2
     // 順方向は0，逆方面は1
-    //val dir = 0
+    val dir = 1
     //    val divEleStr = "weekday-0"
     //    val divEle = doc.getElementById(divEleStr)
 
     val divEleStr = "time-table-frame"
-    val divEle = doc.getElementsByAttributeValueContaining("class", divEleStr)(0)
+    val divEle = doc.getElementsByAttributeValueContaining("class", divEleStr)(dir)
 
     val dlEles = divEle.child(0).children
+    println(dlEles.size())
     // ～時台，ごとに切り出す
     val nameTimeTupleListListBuf = for (dlEle <- dlEles) yield {
-      //println(dlEle.text)
+      println(dlEle.text)
       val liEles = dlEle.child(1).child(0).children
       // 時刻1つ，ごとに切り出す
       val nameTimeTupleListBuf = for (liEle <- liEles) yield {
         val uri = "https:" + liEle.child(0).attr("href")
-        //println(uri)
+        println(uri)
         getOnePage(uri, "")
       }
       nameTimeTupleListBuf.toList
@@ -43,6 +44,12 @@ object main {
     // このテーブルに含まれるすべての列車の停車駅と時刻の組を取得
     val nameTimeTable = nameTimeTupleListListBuf.flatten.toSeq
     //println("All: " + nameTimeTable.size)
+
+    //    for (nameTimeSeq <- nameTimeTable) {
+    //      for (nameTime <- nameTimeSeq) {
+    //        println(nameTime._1 + " " + nameTime._2)
+    //      }
+    //    }
 
     val firstNameSeq = createFirstNameSeq(nameTimeTable)
     //println(firstNameSeq)
@@ -212,6 +219,7 @@ object main {
   }
 
   def getOnePage(uri: String, outputPath: String): Seq[(String, String)] = {
+    Thread.sleep(500)
     //val urlHead = uri.split("/").init.mkString("/")
 
     val doc = Jsoup.connect(uri).get
@@ -221,6 +229,7 @@ object main {
 
     val nameTimeTupleBuf = for (tableEle <- tableEles) yield {
       val name = tableEle.getElementsByClass("name").text
+      //println(name)
       val time = tableEle.getElementsByClass("time").text.replace("発", "").replace("着", "")
       //println(name + "," + time)
       (name, time)
