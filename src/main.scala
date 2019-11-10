@@ -8,9 +8,11 @@ import scala.io._
 
 object main {
   def main(args: Array[String]) {
-    val uri = "https://www.navitime.co.jp/diagram/timetable?node=00007965&lineId=00000123"
+    //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00007965&lineId=00000123"
+    //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00006668&lineId=00000185&trainType=&updown=1&time=2019-12-30"
     //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00000296&lineId=00000190&updown=0"
     //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00007970&lineId=00000192"
+    val uri = "https://www.navitime.co.jp/diagram/timetable?node=00002012&lineId=00000199&trainType=&updown=1&time=2019-12-30"
 
     val doc = Jsoup.connect(uri).get
 
@@ -18,9 +20,12 @@ object main {
     // 平日は0，土曜は1，日曜は2
     val date = 2
     // 順方向は0，逆方面は1
-    val dir = 0
-    val divEleStr = "weekday-0"
-    val divEle = doc.getElementById(divEleStr)
+    //val dir = 0
+    //    val divEleStr = "weekday-0"
+    //    val divEle = doc.getElementById(divEleStr)
+
+    val divEleStr = "time-table-frame"
+    val divEle = doc.getElementsByAttributeValueContaining("class", divEleStr)(0)
 
     val dlEles = divEle.child(0).children
     // ～時台，ごとに切り出す
