@@ -1,7 +1,8 @@
 
 import java.net.SocketTimeoutException
 import java.io.IOException
-import org.jsoup._
+import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
 import collection.JavaConversions._
 import scala.io._
 //import scalax.file.Path
@@ -9,18 +10,18 @@ import scala.io._
 object main {
   def main(args: Array[String]) {
     //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00007965&lineId=00000123"
-    val uri = "https://www.navitime.co.jp/diagram/timetable?node=00006668&lineId=00000185&trainType=&updown=1&time=2019-12-30"
+    //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00006668&lineId=00000185&trainType=&updown=1&time=2019-12-30"
     //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00000296&lineId=00000190&updown=0"
-    //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00007970&lineId=00000192"
-    //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00002012&lineId=00000199&trainType=&updown=1&time=2019-12-30"
+    //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00001174&lineId=00000736&trainType=&updown=0&time=2019-12-07"
+    val uri = "https://www.navitime.co.jp/diagram/timetable?node=00001957&lineId=00000213"
 
     val doc = Jsoup.connect(uri).get
 
     // TODO: 平日，休日や上り，下りをどうするか考える
     // 平日は0，土曜は1，日曜は2
-    val date = 2
+    val date = 0
     // 順方向は0，逆方面は1
-    val dir = 1
+    val dir = 0
     //    val divEleStr = "weekday-0"
     //    val divEle = doc.getElementById(divEleStr)
 
@@ -36,8 +37,16 @@ object main {
       // 時刻1つ，ごとに切り出す
       val nameTimeTupleListBuf = for (liEle <- liEles) yield {
         val uri = "https:" + liEle.child(0).attr("href")
+        val shubetsu = liEle.attr("data-name")
+        //println(shubetsu)
+        // 駅名の（福井県）や〔東福バス〕などを削除する
+        // （も）も含まない0文字以上の文字列を（）で囲んだ文字列にマッチする正規表現
+        // 〔〕も同様の処理
+        val dest = liEle.attr("data-dest").replaceFirst("（[^（）]*）$", "").replaceFirst("〔[^〔〕]*〕$", "")
+        //println(dest)
         println(uri)
-        getOnePage(uri, "")
+        val nameTimeTupleList = getOnePage(uri, "")
+        (shubetsu, dest, nameTimeTupleList)
       }
       nameTimeTupleListBuf.toList
     }
@@ -59,8 +68,14 @@ object main {
 
     //println(allNameSeq)
 
+    // 種別と行き先のリスト
+    val syubetsuDestSeq = for (nameTimeSeqT <- nameTimeTable) yield {
+      (nameTimeSeqT._1, nameTimeSeqT._2)
+    }
+
     // このテーブルに含まれる列車のすべての停車時刻のリストを作成
-    val timeSeqSeq = for (nameTimeSeq <- nameTimeTable) yield {
+    val timeSeqSeq = for (nameTimeSeqT <- nameTimeTable) yield {
+      val nameTimeSeq = nameTimeSeqT._3
       val checkNameSeq = for (nameTimeTuple <- nameTimeSeq) yield {
         nameTimeTuple._1
       }
@@ -84,6 +99,28 @@ object main {
       timeSeq
     }
 
+    // 通過駅の場合はレを入れる
+    val timeSeqSeq2 = for (timeSeq <- timeSeqSeq) yield {
+      // 一番最後の駅は通過できないので除く
+      val tmpSeq = for (i <- 0 to timeSeq.size - 2) yield {
+        if (timeSeq(i) == ("", "")) {
+          val checkSeq = timeSeq.slice(i + 1, timeSeq.size - 1)
+          //println(checkSeq)
+          // 着時刻の部分をすべてつなげて，以降空白しかない場合はもう終点についている
+          val checkString = checkSeq.unzip._1.mkString("")
+          //println(checkString)
+          if (checkString != "") {
+            ("レ", "レ")
+          } else {
+            timeSeq(i)
+          }
+        } else {
+          timeSeq(i)
+        }
+      }
+      tmpSeq :+ tmpSeq.last
+    }
+
     // 着発表示を作る
     val allStrEndSeq = for (i <- 0 to timeSeqSeq(0).size - 1) yield {
       checkStrEnd(i, timeSeqSeq)
@@ -98,7 +135,12 @@ object main {
       }
     }
 
+    // timeSeqSeqに種別と行き先を足す
+    val syubetsuDestTimeSeqSeq = syubetsuDestSeq.zip(timeSeqSeq2)
+
     // 表示用
+    // 駅名
+    print(",,")
     for (nameTuple <- allNameTupleSeq2) {
       // 駅名の（福井県）や〔東福バス〕などを削除する
       // （も）も含まない0文字以上の文字列を（）で囲んだ文字列にマッチする正規表現
@@ -111,6 +153,8 @@ object main {
       }
     }
     println()
+    print(",,")
+    // 着発
     for (strEnd <- allStrEndSeq) {
       if (strEnd._2 != "") {
         print(strEnd._1 + "," + strEnd._2 + ",")
@@ -119,7 +163,12 @@ object main {
       }
     }
     println()
-    for (timeTupleSeq <- timeSeqSeq) {
+    // 時刻
+    for (syubetsuDestTimeSeq <- syubetsuDestTimeSeqSeq) {
+      val syubetsu = syubetsuDestTimeSeq._1._1
+      val dest = syubetsuDestTimeSeq._1._2
+      print(syubetsu + "," + dest + ",")
+      val timeTupleSeq = syubetsuDestTimeSeq._2
       // tupleの先頭にしか時刻が入っていない場合もあるが，
       // その駅が着発になっている駅の場合もあるので，確認しなければならない
       for (i <- 0 to allStrEndSeq.size - 1) {
@@ -141,14 +190,14 @@ object main {
   }
 
   // 最も停車駅が多いものを初期のリストにする
-  def createFirstNameSeq(nameTimeTable: Seq[Seq[(String, String)]]): Seq[String] = {
-    val sizeSeq = for (nameTimeSeq <- nameTimeTable) yield {
-      nameTimeSeq.size
+  def createFirstNameSeq(nameTimeTable: Seq[(String, String, Seq[(String, String)])]): Seq[String] = {
+    val sizeSeq = for (nameTimeSeqT <- nameTimeTable) yield {
+      nameTimeSeqT._3.size
     }
     val maxSize = sizeSeq.max
 
-    val maxSizeNameSeq = for (nameTimeSeq <- nameTimeTable if nameTimeSeq.size == maxSize) yield {
-      for (nameTime <- nameTimeSeq) yield {
+    val maxSizeNameSeq = for (nameTimeSeqT <- nameTimeTable if nameTimeSeqT._3.size == maxSize) yield {
+      for (nameTime <- nameTimeSeqT._3) yield {
         nameTime._1
       }
     }
@@ -156,10 +205,10 @@ object main {
   }
 
   // 全リストから，次に比較するリストを取り出す
-  def createNameSeq(oldNameSeq: Seq[String], checkPoint: Int, nameTimeTable: Seq[Seq[(String, String)]]): Seq[String] = {
+  def createNameSeq(oldNameSeq: Seq[String], checkPoint: Int, nameTimeTable: Seq[(String, String, Seq[(String, String)])]): Seq[String] = {
     //println(checkPoint)
 
-    val checkNameTimeSeq = nameTimeTable(checkPoint)
+    val checkNameTimeSeq = nameTimeTable(checkPoint)._3
     val checkNameSeq = for (checkNameTimeTuple <- checkNameTimeSeq) yield {
       checkNameTimeTuple._1
     }
@@ -218,11 +267,15 @@ object main {
     }
   }
 
+  /*
+   * 1列車の停車駅と時刻のリスト
+   * name, time
+   */
   def getOnePage(uri: String, outputPath: String): Seq[(String, String)] = {
     Thread.sleep(500)
     //val urlHead = uri.split("/").init.mkString("/")
 
-    val doc = Jsoup.connect(uri).get
+    val doc = getData(uri)
 
     val divEle = doc.getElementById("stoplist-matrix")
     val tableEles = divEle.children
@@ -235,5 +288,16 @@ object main {
       (name, time)
     }
     nameTimeTupleBuf.toSeq
+  }
+
+  def getData(uri: String): Document = {
+    try {
+      Jsoup.connect(uri).get
+    } catch {
+      case e: Throwable => {
+        println(e)
+        getData(uri)
+      }
+    }
   }
 }
