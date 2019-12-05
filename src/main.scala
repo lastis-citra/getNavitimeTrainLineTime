@@ -12,8 +12,8 @@ object main {
     //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00007965&lineId=00000123"
     //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00006668&lineId=00000185&trainType=&updown=1&time=2019-12-30"
     //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00000296&lineId=00000190&updown=0"
-    //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00001174&lineId=00000736&trainType=&updown=0&time=2019-12-07"
-    val uri = "https://www.navitime.co.jp/diagram/timetable?node=00001957&lineId=00000213"
+    val uri = "https://www.navitime.co.jp/diagram/timetable?node=00001174&lineId=00000736&trainType=&updown=0&time=2019-12-06"
+    //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00001957&lineId=00000213"
 
     val doc = Jsoup.connect(uri).get
 
@@ -179,7 +179,15 @@ object main {
           // allStrEndSeqが着発の駅
           // tupleの発が空の場合，着時刻を発時刻にも入れる
           if (timeTupleSeq(i)._2 == "") {
-            print(timeTupleSeq(i)._1 + "," + timeTupleSeq(i)._1 + ",")
+            val checkSeq = timeTupleSeq.slice(i + 1, timeTupleSeq.size)
+            //println(checkSeq)
+            // 着時刻の部分をすべてつなげて，以降空白しかない場合はもう終点についている
+            val checkString = checkSeq.unzip._1.mkString("")
+            if (checkString != "") {
+              print(timeTupleSeq(i)._1 + "," + timeTupleSeq(i)._1 + ",")
+            } else {
+              print(timeTupleSeq(i)._1 + "," + timeTupleSeq(i)._2 + ",")
+            }
           } else {
             print(timeTupleSeq(i)._1 + "," + timeTupleSeq(i)._2 + ",")
           }
