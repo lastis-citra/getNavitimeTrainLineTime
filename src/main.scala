@@ -7,26 +7,36 @@ import collection.JavaConversions._
 import scala.io._
 //import scalax.file.Path
 
+object Global {
+  val USE = true
+  val END = "横浜"
+}
+
+sealed abstract class Week
+
+final case object weekday extends Week
+final case object saturday extends Week
+final case object holiday extends Week
+
 object main {
   def main(args: Array[String]) {
     //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00007965&lineId=00000123"
     //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00006668&lineId=00000185&trainType=&updown=1&time=2019-12-30"
     //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00000296&lineId=00000190&updown=0"
-    val uri = "https://www.navitime.co.jp/diagram/timetable?node=00001174&lineId=00000736&trainType=&updown=0&time=2019-12-06"
+    val uri = "https://www.navitime.co.jp/diagram/timetable?node=00001174&lineId=00000736&trainType=&updown=0&time=2019-12-07"
     //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00001957&lineId=00000213"
 
     val doc = Jsoup.connect(uri).get
 
-    // TODO: 平日，休日や上り，下りをどうするか考える
-    // 平日は0，土曜は1，日曜は2
-    val date = 0
+    // 平日はweekday，土曜はsaturday，日曜はholiday
+    val date = saturday
     // 順方向は0，逆方面は1
     val dir = 0
-    //    val divEleStr = "weekday-0"
-    //    val divEle = doc.getElementById(divEleStr)
 
-    val divEleStr = "time-table-frame"
-    val divEle = doc.getElementsByAttributeValueContaining("class", divEleStr)(dir)
+    val id = date + "-" + dir
+
+    //val divEleStr = "time-table-frame"
+    val divEle = doc.getElementsByAttributeValueContaining("id", id)(0)
 
     val dlEles = divEle.child(0).children
     println(dlEles.size())
@@ -104,7 +114,7 @@ object main {
       // 一番最後の駅は通過できないので除く
       val tmpSeq = for (i <- 0 to timeSeq.size - 2) yield {
         if (timeSeq(i) == ("", "")) {
-          val checkSeq = timeSeq.slice(i + 1, timeSeq.size - 1)
+          val checkSeq = timeSeq.slice(i + 1, timeSeq.size)
           //println(checkSeq)
           // 着時刻の部分をすべてつなげて，以降空白しかない場合はもう終点についている
           val checkString = checkSeq.unzip._1.mkString("")
@@ -118,7 +128,7 @@ object main {
           timeSeq(i)
         }
       }
-      tmpSeq :+ tmpSeq.last
+      tmpSeq :+ timeSeq.last
     }
 
     // 着発表示を作る
@@ -200,7 +210,16 @@ object main {
   // 最も停車駅が多いものを初期のリストにする
   def createFirstNameSeq(nameTimeTable: Seq[(String, String, Seq[(String, String)])]): Seq[String] = {
     val sizeSeq = for (nameTimeSeqT <- nameTimeTable) yield {
-      nameTimeSeqT._3.size
+      val stopStationSeq = nameTimeSeqT._3.unzip._1
+      if (Global.USE) {
+        if (stopStationSeq.contains(Global.END)) {
+          nameTimeSeqT._3.size
+        } else {
+          0
+        }
+      } else {
+        nameTimeSeqT._3.size
+      }
     }
     val maxSize = sizeSeq.max
 
@@ -209,6 +228,7 @@ object main {
         nameTime._1
       }
     }
+    //println(maxSizeNameSeq)
     maxSizeNameSeq(0)
   }
 
@@ -238,7 +258,6 @@ object main {
       val newSeq = if (checkPoint > 0) {
         val preCheckName = checkNameSeq(checkPoint - 1)
         if (oldNameSeq.contains(preCheckName)) {
-          //println("test")
           //println(oldNameSeq)
           val splitPoint = oldNameSeq.indexOf(preCheckName)
           //println(splitPoint)
