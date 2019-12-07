@@ -8,7 +8,7 @@ import scala.io._
 //import scalax.file.Path
 
 object Global {
-  val USE = true
+  val USE = false
   val END = "横浜"
 }
 
@@ -23,13 +23,13 @@ object main {
     //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00007965&lineId=00000123"
     //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00006668&lineId=00000185&trainType=&updown=1&time=2019-12-30"
     //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00000296&lineId=00000190&updown=0"
-    val uri = "https://www.navitime.co.jp/diagram/timetable?node=00001174&lineId=00000736&trainType=&updown=0&time=2019-12-07"
+    val uri = "https://www.navitime.co.jp/diagram/timetable?node=00004254&lineId=00000139&trainType=&updown=0&time=2019-12-07"
     //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00001957&lineId=00000213"
 
     val doc = Jsoup.connect(uri).get
 
     // 平日はweekday，土曜はsaturday，日曜はholiday
-    val date = saturday
+    val date = weekday
     // 順方向は0，逆方面は1
     val dir = 0
 
@@ -114,12 +114,15 @@ object main {
       // 一番最後の駅は通過できないので除く
       val tmpSeq = for (i <- 0 to timeSeq.size - 2) yield {
         if (timeSeq(i) == ("", "")) {
-          val checkSeq = timeSeq.slice(i + 1, timeSeq.size)
-          //println(checkSeq)
+          // 着時刻の部分をすべてつなげて，前方に空白しかない場合は始発駅
+          val checkStrSeq = timeSeq.slice(0, i)
+          val checkStrString = checkStrSeq.unzip._1.mkString("")
           // 着時刻の部分をすべてつなげて，以降空白しかない場合はもう終点についている
-          val checkString = checkSeq.unzip._1.mkString("")
-          //println(checkString)
-          if (checkString != "") {
+          val checkEndSeq = timeSeq.slice(i + 1, timeSeq.size)
+          //println(checkEndSeq)
+          val checkEndString = checkEndSeq.unzip._1.mkString("")
+          //println(checkEndString)
+          if (checkEndString != "" && checkStrString != "") {
             ("レ", "レ")
           } else {
             timeSeq(i)
@@ -189,11 +192,16 @@ object main {
           // allStrEndSeqが着発の駅
           // tupleの発が空の場合，着時刻を発時刻にも入れる
           if (timeTupleSeq(i)._2 == "") {
-            val checkSeq = timeTupleSeq.slice(i + 1, timeTupleSeq.size)
-            //println(checkSeq)
+            // 着時刻の部分をすべてつなげて，前方に空白しかない場合は始発駅
+            val checkStrSeq = timeTupleSeq.slice(0, i)
+            val checkStrString = checkStrSeq.unzip._1.mkString("")
             // 着時刻の部分をすべてつなげて，以降空白しかない場合はもう終点についている
-            val checkString = checkSeq.unzip._1.mkString("")
-            if (checkString != "") {
+            val checkEndSeq = timeTupleSeq.slice(i + 1, timeTupleSeq.size)
+            //println(checkSeq)
+            val checkEndString = checkEndSeq.unzip._1.mkString("")
+            if (checkStrString == "") {
+              print("," + timeTupleSeq(i)._1 + ",")
+            } else if (checkEndString != "") {
               print(timeTupleSeq(i)._1 + "," + timeTupleSeq(i)._1 + ",")
             } else {
               print(timeTupleSeq(i)._1 + "," + timeTupleSeq(i)._2 + ",")
