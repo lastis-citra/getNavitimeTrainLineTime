@@ -1,4 +1,9 @@
-*.class
-*.log
-/bin/
 .cache-main
+.classpath
+.project
+.settings/
+.bloop/
+.metals/
+target/
+project/
+bin/
