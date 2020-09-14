@@ -63,7 +63,15 @@ object main {
       // 時刻1つ，ごとに切り出す
       val nameTimeTupleListBuf = for (liEle <- liEles) yield {
         val uri = "https:" + liEle.child(0).attr("href")
-        val shubetsu = liEle.attr("data-name")
+        // 新幹線だと号数，それ以外だと路線名が入る想定
+        val shubetsu2 = liEle.attr("data-long-name")
+        // 号数っぽい表記の場合はそちらを種別として選択
+        val numberPattern = ".*[0-9]+号.*".r
+        val shubetsu = numberPattern.findFirstMatchIn(shubetsu2) match {
+          case Some(_) => shubetsu2
+          case None => liEle.attr("data-name")
+        }
+
         //println(shubetsu)
         // 駅名の（福井県）や〔東福バス〕などを削除する
         // （も）も含まない0文字以上の文字列を（）で囲んだ文字列にマッチする正規表現
