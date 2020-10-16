@@ -1,5 +1,7 @@
-name := "getNavitimeBusLineTime"
-version := "1.0"
-scalaVersion in ThisBuild := "2.12.10"
+name := "getNavitimeTrainLineTime"
 
-libraryDependencies += "org.jsoup" % "jsoup" % "1.12.1"
+version := "1.0"
+
+scalaVersion := "2.13.3"
+
+libraryDependencies += "org.jsoup" % "jsoup" % "1.13.1"
