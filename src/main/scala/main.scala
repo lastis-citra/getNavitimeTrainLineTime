@@ -16,12 +16,12 @@ case object weekday extends Week
 case object saturday extends Week
 case object holiday extends Week
 
-/**
- * arg0: URL
- * arg1: 平日はweekday，土曜はsaturday，日曜はholiday
- * arg2: 順方向は0，逆方面は1
- * sbt run https://www.navitime.co.jp/diagram/timetable?node=00004848&lineId=00000123&trainType=&updown=0&time=2020-03-16 weekday 0
-**/
+/** arg0: URL
+  * arg1: 平日はweekday，土曜はsaturday，日曜はholiday
+  * arg2: 順方向は0，逆方面は1
+  * sbt run https://www.navitime.co.jp/diagram/timetable?node=00004848&lineId=00000123&trainType=&updown=0&time=2020-03-16 weekday 0
+  * console, sbt shellともうまく動かないので設定で引数を指定してmainを実行すること
+  */
 object main {
   def main(args: Array[String]) {
     //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00007965&lineId=00000123"
@@ -30,7 +30,7 @@ object main {
     //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00004848&lineId=00000123&trainType=&updown=0&time=2020-03-16"
     //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00001957&lineId=00000213"
     val uri = args(0)
-    
+
     val doc = Jsoup.connect(uri).get
 
     // 平日はweekday，土曜はsaturday，日曜はholiday
@@ -48,7 +48,7 @@ object main {
     val divEles = doc.getElementsByAttributeValueContaining("id", id)
     val divEle = if (divEles.size > 0) {
       divEles.asScala.head
-    }else{
+    } else {
       doc.getElementsByAttributeValueContaining("id", id2).asScala.head
     }
 
@@ -60,21 +60,24 @@ object main {
       val liEles = dlEle.child(1).child(0).children
       // 時刻1つ，ごとに切り出す
       val nameTimeTupleListBuf = for (liEle <- liEles.asScala) yield {
-        val uri = "https:" + liEle.child(0).attr("href")
+        val uri = "https://www.navitime.co.jp" + liEle.child(0).attr("href")
         // 新幹線だと号数，それ以外だと路線名が入る想定
         val shubetsu2 = liEle.attr("data-long-name")
         // 号数っぽい表記の場合はそちらを種別として選択
         val numberPattern = ".*[0-9]+号.*".r
         val shubetsu = numberPattern.findFirstMatchIn(shubetsu2) match {
           case Some(_) => shubetsu2
-          case None => liEle.attr("data-name")
+          case None    => liEle.attr("data-name")
         }
 
         //println(shubetsu)
         // 駅名の（福井県）や〔東福バス〕などを削除する
         // （も）も含まない0文字以上の文字列を（）で囲んだ文字列にマッチする正規表現
         // 〔〕も同様の処理
-        val dest = liEle.attr("data-dest").replaceFirst("（[^（）]*）$", "").replaceFirst("〔[^〔〕]*〕$", "")
+        val dest = liEle
+          .attr("data-dest")
+          .replaceFirst("（[^（）]*）$", "")
+          .replaceFirst("〔[^〔〕]*〕$", "")
         //println(dest)
         println(uri)
         val nameTimeTupleList = getOnePage(uri)
@@ -180,7 +183,8 @@ object main {
       // 駅名の（福井県）や〔東福バス〕などを削除する
       // （も）も含まない0文字以上の文字列を（）で囲んだ文字列にマッチする正規表現
       // 〔〕も同様の処理
-      val rename = nameTuple._1.replaceFirst("（[^（）]*）$", "").replaceFirst("〔[^〔〕]*〕$", "")
+      val rename =
+        nameTuple._1.replaceFirst("（[^（）]*）$", "").replaceFirst("〔[^〔〕]*〕$", "")
       if (nameTuple._2 != "") {
         print(rename + "," + rename + ",")
       } else {
@@ -238,7 +242,9 @@ object main {
   }
 
   // 最も停車駅が多いものを初期のリストにする
-  def createFirstNameSeq(nameTimeTable: Seq[(String, String, Seq[(String, String)])]): Seq[String] = {
+  def createFirstNameSeq(
+      nameTimeTable: Seq[(String, String, Seq[(String, String)])]
+  ): Seq[String] = {
     val sizeSeq = for (nameTimeSeqT <- nameTimeTable) yield {
       val stopStationSeq = nameTimeSeqT._3.map(_._1)
       if (Global.USE) {
@@ -253,18 +259,24 @@ object main {
     }
     val maxSize = sizeSeq.max
 
-    val maxSizeNameSeq = for (nameTimeSeqT <- nameTimeTable if nameTimeSeqT._3.size == maxSize) yield {
-      for (nameTime <- nameTimeSeqT._3) yield {
-        nameTime._1
-      }
-    }
+    val maxSizeNameSeq =
+      for (nameTimeSeqT <- nameTimeTable if nameTimeSeqT._3.size == maxSize)
+        yield {
+          for (nameTime <- nameTimeSeqT._3) yield {
+            nameTime._1
+          }
+        }
     //println(maxSizeNameSeq)
     maxSizeNameSeq.head
   }
 
   // 全リストから，次に比較するリストを取り出す
   @tailrec
-  def createNameSeq(oldNameSeq: Seq[String], checkPoint: Int, nameTimeTable: Seq[(String, String, Seq[(String, String)])]): Seq[String] = {
+  def createNameSeq(
+      oldNameSeq: Seq[String],
+      checkPoint: Int,
+      nameTimeTable: Seq[(String, String, Seq[(String, String)])]
+  ): Seq[String] = {
     //println(checkPoint)
 
     val checkNameTimeSeq = nameTimeTable(checkPoint)._3
@@ -282,7 +294,11 @@ object main {
   // 古いリストと新しいリストを比較する
   // 古いリストにない駅があった場合は，その駅を間に挿入し，新しいリストとして返す
   @tailrec
-  def createNameSeqOne(oldNameSeq: Seq[String], checkPoint: Int, checkNameSeq: Seq[String]): Seq[String] = {
+  def createNameSeqOne(
+      oldNameSeq: Seq[String],
+      checkPoint: Int,
+      checkNameSeq: Seq[String]
+  ): Seq[String] = {
     val checkName = checkNameSeq(checkPoint)
     val newNameSeq = if (!oldNameSeq.contains(checkName)) {
       //println(checkName)
@@ -318,11 +334,19 @@ object main {
   // 1本でも着発の両方が設定されている列車のある駅は("着", "発")を返す
   // 最後の駅は("着", "")を返す
   // それ以外の駅は("発", "")を返す
-  def checkStrEnd(i: Int, timeSeqSeq: Seq[Seq[(String, String)]]): (String, String) = {
+  def checkStrEnd(
+      i: Int,
+      timeSeqSeq: Seq[Seq[(String, String)]]
+  ): (String, String) = {
     // 検索用に2番目に時刻が入っていればtrue，それ以外はfalseが入ったSeqを作っておく
-    val checkStrSeq = for (timeSeq <- timeSeqSeq) yield { if (timeSeq(i)._2 != "") { true } else { false } }
-    if (checkStrSeq.contains(true)) { ("着", "発") } else {
-      if (i == timeSeqSeq.head.size - 1) { ("着", "") } else { ("発", "") }
+    val checkStrSeq = for (timeSeq <- timeSeqSeq) yield {
+      if (timeSeq(i)._2 != "") { true }
+      else { false }
+    }
+    if (checkStrSeq.contains(true)) { ("着", "発") }
+    else {
+      if (i == timeSeqSeq.head.size - 1) { ("着", "") }
+      else { ("発", "") }
     }
   }
 
@@ -333,7 +357,6 @@ object main {
   def getOnePage(uri: String): Seq[(String, String)] = {
     Thread.sleep(500)
     //val urlHead = uri.split("/").init.mkString("/")
-
     val doc = getData(uri)
 
     //val divEle = doc.getElementById("stoplist-matrix")
@@ -344,10 +367,18 @@ object main {
       val name = tableEle.getElementsByClass("station-name").text
       //println(name)
       //val time = tableEle.getElementsByClass("time").text.replace("発", "").replace("着", "")
-      val time = if(tableEle.getElementsByClass("time").size > 0){
-        tableEle.getElementsByClass("time").text.replace("発", "").replace("着", "")
-      }else{
-        tableEle.getElementsByClass("from-to-time").text.replace("発", "").replace("着", "")
+      val time = if (tableEle.getElementsByClass("time").size > 0) {
+        tableEle
+          .getElementsByClass("time")
+          .text
+          .replace("発", "")
+          .replace("着", "")
+      } else {
+        tableEle
+          .getElementsByClass("from-to-time")
+          .text
+          .replace("発", "")
+          .replace("着", "")
       }
       //println(name + "," + time)
       (name, time)
