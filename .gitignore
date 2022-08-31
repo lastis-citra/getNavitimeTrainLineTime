@@ -9,3 +9,4 @@ project/
 bin/
 .bsp/
 .idea/
+result.csv

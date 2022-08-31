@@ -5,6 +5,9 @@ import scala.annotation.tailrec
 import scala.jdk.CollectionConverters._
 //import scalax.file.Path
 
+import java.io.FileOutputStream
+import java.io.OutputStreamWriter
+
 object Global {
   val USE = false
   val END = "横浜"
@@ -181,9 +184,24 @@ object main {
     // timeSeqSeqに種別と行き先を足す
     val syubetsuDestTimeSeqSeq = syubetsuDestSeq.zip(timeSeqSeq2)
 
+    // ファイル出力用，最初に前のファイルを削除
+    val fileName = "result.csv"
+    val encode = "UTF-8"
+    val fileOutPutStreamPre = new FileOutputStream(fileName, false)
+    val writerPre = new OutputStreamWriter(fileOutPutStreamPre, encode)
+    writerPre.close()
+
+    val fileOutPutStream = new FileOutputStream(fileName, true)
+    val writer = new OutputStreamWriter(fileOutPutStream, encode)
+
+    def printAndWrite(writer: OutputStreamWriter, str: String) = {
+      writer.write(str)
+      print(str)
+    }
+
     // 表示用
     // 駅名
-    print(",,")
+    printAndWrite(writer, ",,")
     for (nameTuple <- allNameTupleSeq2) {
       // 駅名の（福井県）や〔東福バス〕などを削除する
       // （も）も含まない0文字以上の文字列を（）で囲んだ文字列にマッチする正規表現
@@ -191,34 +209,33 @@ object main {
       val rename =
         nameTuple._1.replaceFirst("（[^（）]*）$", "").replaceFirst("〔[^〔〕]*〕$", "")
       if (nameTuple._2 != "") {
-        print(rename + "," + rename + ",")
+        printAndWrite(writer, rename + "," + rename + ",")
       } else {
-        print(rename + ",")
+        printAndWrite(writer, rename + ",")
       }
     }
-    println()
-    print(",,")
+    printAndWrite(writer, "\n,,")
     // 着発
     for (strEnd <- allStrEndSeq) {
       if (strEnd._2 != "") {
-        print(strEnd._1 + "," + strEnd._2 + ",")
+        printAndWrite(writer, strEnd._1 + "," + strEnd._2 + ",")
       } else {
-        print(strEnd._1 + ",")
+        printAndWrite(writer, strEnd._1 + ",")
       }
     }
-    println()
+    printAndWrite(writer, "\n")
     // 時刻
     for (syubetsuDestTimeSeq <- syubetsuDestTimeSeqSeq) {
       val syubetsu = syubetsuDestTimeSeq._1._1
       val dest = syubetsuDestTimeSeq._1._2
-      print(syubetsu + "," + dest + ",")
+      printAndWrite(writer, syubetsu + "," + dest + ",")
       val timeTupleSeq = syubetsuDestTimeSeq._2
       // tupleの先頭にしか時刻が入っていない場合もあるが，
       // その駅が着発になっている駅の場合もあるので，確認しなければならない
       for (i <- allStrEndSeq.indices) {
         // allStrEndSeqが発のみの駅の場合，tupleの先頭だけを表示
         if (allStrEndSeq(i)._2 == "") {
-          print(timeTupleSeq(i)._1 + ",")
+          printAndWrite(writer, timeTupleSeq(i)._1 + ",")
         } else {
           // allStrEndSeqが着発の駅
           // tupleの発が空の場合，着時刻を発時刻にも入れる
@@ -231,19 +248,20 @@ object main {
             //println(checkSeq)
             val checkEndString = checkEndSeq.map(_._1).mkString("")
             if (checkStrString == "") {
-              print("," + timeTupleSeq(i)._1 + ",")
+              printAndWrite(writer, "," + timeTupleSeq(i)._1 + ",")
             } else if (checkEndString != "") {
-              print(timeTupleSeq(i)._1 + "," + timeTupleSeq(i)._1 + ",")
+              printAndWrite(writer, timeTupleSeq(i)._1 + "," + timeTupleSeq(i)._1 + ",")
             } else {
-              print(timeTupleSeq(i)._1 + "," + timeTupleSeq(i)._2 + ",")
+              printAndWrite(writer, timeTupleSeq(i)._1 + "," + timeTupleSeq(i)._2 + ",")
             }
           } else {
-            print(timeTupleSeq(i)._1 + "," + timeTupleSeq(i)._2 + ",")
+            printAndWrite(writer, timeTupleSeq(i)._1 + "," + timeTupleSeq(i)._2 + ",")
           }
         }
       }
-      println()
+      printAndWrite(writer, "\n")
     }
+    writer.close()
   }
 
   // 最も停車駅が多いものを初期のリストにする
