@@ -2,6 +2,7 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 
 import scala.annotation.tailrec
+import scala.collection.mutable
 import scala.jdk.CollectionConverters._
 //import scalax.file.Path
 
@@ -34,65 +35,15 @@ object main {
     //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00001957&lineId=00000213"
     val uri = args(0)
 
-    val doc = Jsoup.connect(uri).get
-
-    // 平日はweekday，土曜はsaturday，日曜はholiday
+    // 平日は0，土曜は1，日曜は2
     //val date = weekday
-    val date = args(1)
+    val dateInt = args(1).toInt
     // 順方向は0，逆方面は1
     //val dir = 1
-    val dir = args(2)
+    val dir = args(2).toInt
 
-    val id = date + "-" + dir
-    val id2 = "segment-" + dir
+    val nameTimeTupleListListBuf = mainProcess(uri, dateInt, dir)
 
-    //val divEleStr = "time-table-frame"
-    //val divEle = doc.getElementsByAttributeValueContaining("id", id)(0)
-    val divEles = doc.getElementsByAttributeValueContaining("id", id)
-    val divEle = if (divEles.size > 0) {
-      divEles.asScala.head
-    } else {
-      doc.getElementsByAttributeValueContaining("id", id2).asScala.head
-    }
-
-    val dlEles = divEle.child(0).children
-    println(dlEles.size())
-    // ～時台，ごとに切り出す
-    val nameTimeTupleListListBuf = for (dlEle <- dlEles.asScala) yield {
-      println(dlEle.text)
-      val liEles = dlEle.child(1).child(0).children
-      // 時刻1つ，ごとに切り出す
-      val nameTimeTupleListBuf =
-        for (
-          liEle <- liEles.asScala
-          // 特定の種別のみ抽出したい場合
-//          if liEle.attr("data-long-name").contains("ひたち")
-        ) yield {
-          val uri = "https://www.navitime.co.jp" + liEle.child(0).attr("href")
-          // 新幹線だと号数，それ以外だと路線名が入る想定
-          val shubetsu2 = liEle.attr("data-long-name")
-          // 号数っぽい表記の場合はそちらを種別として選択
-          val numberPattern = ".*[0-9]+号.*".r
-          val shubetsu = numberPattern.findFirstMatchIn(shubetsu2) match {
-            case Some(_) => shubetsu2
-            case None    => liEle.attr("data-name")
-          }
-
-          //println(shubetsu)
-          // 駅名の（福井県）や〔東福バス〕などを削除する
-          // （も）も含まない0文字以上の文字列を（）で囲んだ文字列にマッチする正規表現
-          // 〔〕も同様の処理
-          val dest = liEle
-            .attr("data-dest")
-            .replaceFirst("（[^（）]*）$", "")
-            .replaceFirst("〔[^〔〕]*〕$", "")
-          //println(dest)
-          println(uri)
-          val nameTimeTupleList = getOnePage(uri)
-          (shubetsu, dest, nameTimeTupleList)
-        }
-      nameTimeTupleListBuf.toList
-    }
     // このテーブルに含まれるすべての列車の停車駅と時刻の組を取得
     val nameTimeTable = nameTimeTupleListListBuf.flatten.toSeq
     //println("All: " + nameTimeTable.size)
@@ -262,6 +213,71 @@ object main {
       printAndWrite(writer, "\n")
     }
     writer.close()
+  }
+
+  // 順方向は0，逆方面は1
+  //val dir = 1
+  def mainProcess(uri: String, dateInt: Int, dir: Int): mutable.Buffer[List[(String, String, Seq[(String, String)])]] = {
+    val doc = Jsoup.connect(uri).get
+
+    // 平日はweekday，土曜はsaturday，日曜はholiday
+    //val date = weekday
+    val date =
+      if(dateInt == 0){ "weekday" }
+      else if(dateInt == 1){ "saturday" }
+      else{ "sunday" }
+
+    val id = date + "-" + dir
+    val id2 = "segment-" + dir
+
+    //val divEleStr = "time-table-frame"
+    //val divEle = doc.getElementsByAttributeValueContaining("id", id)(0)
+    val divEles = doc.getElementsByAttributeValueContaining("id", id)
+    val divEle = if (divEles.size > 0) {
+      divEles.asScala.head
+    } else {
+      doc.getElementsByAttributeValueContaining("id", id2).asScala.head
+    }
+
+    val dlEles = divEle.child(0).children
+    println(dlEles.size())
+    // ～時台，ごとに切り出す
+    val nameTimeTupleListListBuf = for (dlEle <- dlEles.asScala) yield {
+      println(dlEle.text)
+      val liEles = dlEle.child(1).child(0).children
+      // 時刻1つ，ごとに切り出す
+      val nameTimeTupleListBuf =
+        for (
+          liEle <- liEles.asScala
+          // 特定の種別のみ抽出したい場合
+          //          if liEle.attr("data-long-name").contains("ひたち")
+        ) yield {
+          val uri = "https://www.navitime.co.jp" + liEle.child(0).attr("href")
+          // 新幹線だと号数，それ以外だと路線名が入る想定
+          val shubetsu2 = liEle.attr("data-long-name")
+          // 号数っぽい表記の場合はそちらを種別として選択
+          val numberPattern = ".*[0-9]+号.*".r
+          val shubetsu = numberPattern.findFirstMatchIn(shubetsu2) match {
+            case Some(_) => shubetsu2
+            case None => liEle.attr("data-name")
+          }
+
+          //println(shubetsu)
+          // 駅名の（福井県）や〔東福バス〕などを削除する
+          // （も）も含まない0文字以上の文字列を（）で囲んだ文字列にマッチする正規表現
+          // 〔〕も同様の処理
+          val dest = liEle
+            .attr("data-dest")
+            .replaceFirst("（[^（）]*）$", "")
+            .replaceFirst("〔[^〔〕]*〕$", "")
+          //println(dest)
+          println(uri)
+          val nameTimeTupleList = getOnePage(uri)
+          (shubetsu, dest, nameTimeTupleList)
+        }
+      nameTimeTupleListBuf.toList
+    }
+    return nameTimeTupleListListBuf
   }
 
   // 最も停車駅が多いものを初期のリストにする
