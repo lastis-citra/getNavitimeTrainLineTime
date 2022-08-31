@@ -106,17 +106,20 @@ object main {
 //    println(s"mCountSeq: $mCountSeq")
     val maxIndex = mCountSeq.indexOf(mCountSeq.max)
     println(s"maxIndex: $maxIndex, ${allNameSeq(maxIndex)}")
+
+    // 種別，行き先も一緒に並び替え，削除するために一度結合する
+    val nameTimeTablePre = syubetsuDestSeqPre.zip(timeSeqSeqPre)
     // MaxIndexの発車時刻でソート，発車時刻がない場合は到着時刻
-    val timeSeqSeqPre2 = timeSeqSeqPre
+    val nameTimeTablePre2 = nameTimeTablePre
       .sortWith((a, b) => {
-        val aVal = if (a(maxIndex)._2 != "") a(maxIndex)._2 else a(maxIndex)._1
-        val bVal = if (b(maxIndex)._2 != "") b(maxIndex)._2 else b(maxIndex)._1
+        val aVal =
+          if (a._2(maxIndex)._2 != "") a._2(maxIndex)._2 else a._2(maxIndex)._1
+        val bVal =
+          if (b._2(maxIndex)._2 != "") b._2(maxIndex)._2 else b._2(maxIndex)._1
         aVal < bVal
+        // 同値を削除する（すべての発着時刻を文字列に結合して比較）
       })
-    // 同値を削除する（すべての発着時刻を文字列に結合して比較）
-    // 種別，行き先も一緒に削除するために一度結合する
-    val nameTimeTablePre = syubetsuDestSeqPre.zip(timeSeqSeqPre2)
-    val nameTimeTablePre2 = nameTimeTablePre.distinctBy(a => a._2.mkString(","))
+      .distinctBy(a => a._2.mkString(","))
     val timeSeqSeq = for (nameTime <- nameTimeTablePre2) yield {
       nameTime._2
     }
