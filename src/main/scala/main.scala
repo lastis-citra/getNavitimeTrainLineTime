@@ -14,7 +14,7 @@ object Global {
   val END = "横浜"
 }
 
-1/** arg0: URL
+/** arg0: URL
   * arg1: 平日は0，土曜は1，日曜は2
   * arg2: 順方向は0，逆方面は1
   * sbt run https://www.navitime.co.jp/diagram/timetable?node=00004848&lineId=00000123&trainType=&updown=0&time=2020-03-16 0 0
