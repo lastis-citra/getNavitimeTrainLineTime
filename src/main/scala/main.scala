@@ -14,20 +14,14 @@ object Global {
   val END = "横浜"
 }
 
-sealed abstract class Week
-
-case object weekday extends Week
-case object saturday extends Week
-case object holiday extends Week
-
-/** arg0: URL
-  * arg1: 平日はweekday，土曜はsaturday，日曜はholiday
+1/** arg0: URL
+  * arg1: 平日は0，土曜は1，日曜は2
   * arg2: 順方向は0，逆方面は1
-  * sbt run https://www.navitime.co.jp/diagram/timetable?node=00004848&lineId=00000123&trainType=&updown=0&time=2020-03-16 weekday 0
+  * sbt run https://www.navitime.co.jp/diagram/timetable?node=00004848&lineId=00000123&trainType=&updown=0&time=2020-03-16 0 0
   * console, sbt shellともうまく動かないので設定で引数を指定してmainを実行すること
   */
 object main {
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
     //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00007965&lineId=00000123"
     //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00006668&lineId=00000185&trainType=&updown=1&time=2019-12-30"
     //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00000296&lineId=00000190&updown=0"
@@ -47,7 +41,7 @@ object main {
       val uri = input._1._1
       val dateInt = input._1._2.toInt
       val dir = input._2.toInt
-      println(s"uri: ${uri}, dateInt: ${dateInt}, dir: ${dir}")
+      println(s"uri: $uri, dateInt: $dateInt, dir: $dir")
       mainProcess(uri, dateInt, dir)
     }
 
@@ -154,7 +148,7 @@ object main {
     val fileOutPutStream = new FileOutputStream(fileName, true)
     val writer = new OutputStreamWriter(fileOutPutStream, encode)
 
-    def printAndWrite(writer: OutputStreamWriter, str: String) = {
+    def printAndWrite(writer: OutputStreamWriter, str: String): Unit = {
       writer.write(str)
       print(str)
     }
@@ -286,7 +280,7 @@ object main {
         }
       nameTimeTupleListBuf.toList
     }
-    return nameTimeTupleListListBuf
+    nameTimeTupleListListBuf
   }
 
   // 最も停車駅が多いものを初期のリストにする
