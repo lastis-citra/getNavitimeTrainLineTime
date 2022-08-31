@@ -33,16 +33,25 @@ object main {
     //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00000296&lineId=00000190&updown=0"
     //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00004848&lineId=00000123&trainType=&updown=0&time=2020-03-16"
     //val uri = "https://www.navitime.co.jp/diagram/timetable?node=00001957&lineId=00000213"
-    val uri = args(0)
+    val uriArray = args(0).split(',')
 
     // 平日は0，土曜は1，日曜は2
     //val date = weekday
-    val dateInt = args(1).toInt
+    val dateIntArray = args(1).split(',')
     // 順方向は0，逆方面は1
     //val dir = 1
-    val dir = args(2).toInt
+    val dirArray = args(2).split(',')
 
-    val nameTimeTupleListListBuf = mainProcess(uri, dateInt, dir)
+    val inputs = uriArray.zip(dateIntArray).zip(dirArray)
+    val nameTimeTupleListListBufArray = for(input <- inputs) yield{
+      val uri = input._1._1
+      val dateInt = input._1._2.toInt
+      val dir = input._2.toInt
+      println(s"uri: ${uri}, dateInt: ${dateInt}, dir: ${dir}")
+      mainProcess(uri, dateInt, dir)
+    }
+
+    val nameTimeTupleListListBuf = nameTimeTupleListListBufArray.flatten
 
     // このテーブルに含まれるすべての列車の停車駅と時刻の組を取得
     val nameTimeTable = nameTimeTupleListListBuf.flatten.toSeq
