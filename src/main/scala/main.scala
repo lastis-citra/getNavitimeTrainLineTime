@@ -2,7 +2,7 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 
 import scala.annotation.tailrec
-import scala.collection.mutable
+import scala.collection.{immutable, mutable}
 import scala.jdk.CollectionConverters._
 //import scalax.file.Path
 
@@ -64,12 +64,12 @@ object main {
     //println(allNameSeq)
 
     // 種別と行き先のリスト
-    val syubetsuDestSeq = for (nameTimeSeqT <- nameTimeTable) yield {
+    val syubetsuDestSeqPre = for (nameTimeSeqT <- nameTimeTable) yield {
       (nameTimeSeqT._1, nameTimeSeqT._2)
     }
 
     // このテーブルに含まれる列車のすべての停車時刻のリストを作成
-    val timeSeqSeq = for (nameTimeSeqT <- nameTimeTable) yield {
+    val timeSeqSeqPre = for (nameTimeSeqT <- nameTimeTable) yield {
       val nameTimeSeq = nameTimeSeqT._3
       val checkNameSeq = for (nameTimeTuple <- nameTimeSeq) yield {
         nameTimeTuple._1
@@ -89,7 +89,40 @@ object main {
       }
       timeSeq
     }
-//    print(timeSeqSeq)
+//    println(timeSeqSeq)
+
+    // 一番，時刻が入っている数が多い駅を探したい
+    val countSeq = for (_ <- allNameSeq) yield { 0 }
+    val mCountSeq = scala.collection.mutable.ArraySeq(countSeq: _*)
+    for (timeSeq <- timeSeqSeqPre) {
+      var i = 0
+      for (time <- timeSeq) {
+        if (time._1 != "" || time._2 != "") {
+          mCountSeq.update(i, mCountSeq(i) + 1)
+        }
+        i += 1
+      }
+    }
+//    println(s"mCountSeq: $mCountSeq")
+    val maxIndex = mCountSeq.indexOf(mCountSeq.max)
+    println(s"maxIndex: $maxIndex, ${allNameSeq(maxIndex)}")
+    // MaxIndexの発車時刻でソート，発車時刻がない場合は到着時刻
+    val timeSeqSeqPre2 = timeSeqSeqPre
+      .sortWith((a, b) => {
+        val aVal = if (a(maxIndex)._2 != "") a(maxIndex)._2 else a(maxIndex)._1
+        val bVal = if (b(maxIndex)._2 != "") b(maxIndex)._2 else b(maxIndex)._1
+        aVal < bVal
+      })
+    // 同値を削除する（すべての発着時刻を文字列に結合して比較）
+    // 種別，行き先も一緒に削除するために一度結合する
+    val nameTimeTablePre = syubetsuDestSeqPre.zip(timeSeqSeqPre2)
+    val nameTimeTablePre2 = nameTimeTablePre.distinctBy(a => a._2.mkString(","))
+    val timeSeqSeq = for (nameTime <- nameTimeTablePre2) yield {
+      nameTime._2
+    }
+    val syubetsuDestSeq = for (nameTime <- nameTimeTablePre2) yield {
+      nameTime._1
+    }
 
     // 通過駅の場合はレを入れる
     val timeSeqSeq2 = for (timeSeq <- timeSeqSeq) yield {
