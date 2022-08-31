@@ -37,7 +37,7 @@ object main {
     val dirArray = args(2).split(',')
 
     val inputs = uriArray.zip(dateIntArray).zip(dirArray)
-    val nameTimeTupleListListBufArray = for(input <- inputs) yield{
+    val nameTimeTupleListListBufArray = for (input <- inputs) yield {
       val uri = input._1._1
       val dateInt = input._1._2.toInt
       val dir = input._2.toInt
@@ -51,11 +51,9 @@ object main {
     val nameTimeTable = nameTimeTupleListListBuf.flatten.toSeq
     //println("All: " + nameTimeTable.size)
 
-    //    for (nameTimeSeq <- nameTimeTable) {
-    //      for (nameTime <- nameTimeSeq) {
-    //        println(nameTime._1 + " " + nameTime._2)
-    //      }
-    //    }
+//    for (nameTimeSeq <- nameTimeTable) {
+//      println(s"${nameTimeSeq._1} ${nameTimeSeq._2}: ${nameTimeSeq._3}")
+//    }
 
     val firstNameSeq = createFirstNameSeq(nameTimeTable)
     //println(firstNameSeq)
@@ -86,15 +84,12 @@ object main {
           if (time.contains(" ")) {
             val tmp = time.split(" ")
             (tmp(0), tmp(1))
-          } else {
-            (time, "")
-          }
-        } else {
-          ("", "")
-        }
+          } else { (time, "") }
+        } else { ("", "") }
       }
       timeSeq
     }
+//    print(timeSeqSeq)
 
     // 通過駅の場合はレを入れる
     val timeSeqSeq2 = for (timeSeq <- timeSeqSeq) yield {
@@ -204,12 +199,21 @@ object main {
             if (checkStrString == "") {
               printAndWrite(writer, "," + timeTupleSeq(i)._1 + ",")
             } else if (checkEndString != "") {
-              printAndWrite(writer, timeTupleSeq(i)._1 + "," + timeTupleSeq(i)._1 + ",")
+              printAndWrite(
+                writer,
+                timeTupleSeq(i)._1 + "," + timeTupleSeq(i)._1 + ","
+              )
             } else {
-              printAndWrite(writer, timeTupleSeq(i)._1 + "," + timeTupleSeq(i)._2 + ",")
+              printAndWrite(
+                writer,
+                timeTupleSeq(i)._1 + "," + timeTupleSeq(i)._2 + ","
+              )
             }
           } else {
-            printAndWrite(writer, timeTupleSeq(i)._1 + "," + timeTupleSeq(i)._2 + ",")
+            printAndWrite(
+              writer,
+              timeTupleSeq(i)._1 + "," + timeTupleSeq(i)._2 + ","
+            )
           }
         }
       }
@@ -220,15 +224,19 @@ object main {
 
   // 順方向は0，逆方面は1
   //val dir = 1
-  def mainProcess(uri: String, dateInt: Int, dir: Int): mutable.Buffer[List[(String, String, Seq[(String, String)])]] = {
+  def mainProcess(
+      uri: String,
+      dateInt: Int,
+      dir: Int
+  ): mutable.Buffer[List[(String, String, Seq[(String, String)])]] = {
     val doc = Jsoup.connect(uri).get
 
     // 平日はweekday，土曜はsaturday，日曜はholiday
     //val date = weekday
     val date =
-      if(dateInt == 0){ "weekday" }
-      else if(dateInt == 1){ "saturday" }
-      else{ "sunday" }
+      if (dateInt == 0) { "weekday" }
+      else if (dateInt == 1) { "saturday" }
+      else { "sunday" }
 
     val id = date + "-" + dir
     val id2 = "segment-" + dir
@@ -262,7 +270,7 @@ object main {
           val numberPattern = ".*[0-9]+号.*".r
           val shubetsu = numberPattern.findFirstMatchIn(shubetsu2) match {
             case Some(_) => shubetsu2
-            case None => liEle.attr("data-name")
+            case None    => liEle.attr("data-name")
           }
 
           //println(shubetsu)
