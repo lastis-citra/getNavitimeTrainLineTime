@@ -18,6 +18,7 @@ object Global {
   * arg1: 平日は0，土曜は1，日曜は2
   * arg2: 順方向は0，逆方面は1
   * arg3: 中間ファイルを読み込む場合は1, 最新データを取る場合は0，省略可
+  * arg4: ソートに利用したい中間駅名，コンマ区切り，省略可，省略しない場合はargs3必須
   * sbt run https://www.navitime.co.jp/diagram/timetable?node=00004848&lineId=00000123&trainType=&updown=0&time=2020-03-16 0 0
   * console, sbt shellともうまく動かないので設定で引数を指定してmainを実行すること
   */
@@ -37,6 +38,8 @@ object main {
     //val dir = 1
     val dirArray = args(2).split(',')
     val READ_FILE = if (args.length > 3 && args(3) == "1") true else false
+    val sortTargetArray =
+      if (args.length > 4) args(4).split(",") else new Array[String](0)
 
     val tmpFileName = "tmp.csv"
     val encode = "UTF-8"
@@ -169,20 +172,41 @@ object main {
     val nameTimeTablePre = syubetsuDestSeqPre.zip(timeSeqSeqPre)
 
     // MaxIndexの発車時刻でソート，発車時刻がない場合は到着時刻
-    val nameTimeTablePre2 = nameTimeTablePre
-      .sortWith((a, b) => {
-        val aVal =
-          if (a._2(maxIndex)._2 != "") a._2(maxIndex)._2 else a._2(maxIndex)._1
-        val bVal =
-          if (b._2(maxIndex)._2 != "") b._2(maxIndex)._2 else b._2(maxIndex)._1
-        aVal < bVal
-        // 同値を削除する（すべての発着時刻を文字列に結合して比較）
-      })
-      .distinctBy(a => a._2.mkString(","))
-    val timeSeqSeq = for (nameTime <- nameTimeTablePre2) yield {
+    val sortIndexArray = if (sortTargetArray.length > 0) {
+      for (sortTarget <- sortTargetArray) yield {
+        allNameSeq.indexOf(sortTarget)
+      }
+    } else {
+      Array(maxIndex)
+    }
+
+    def sortByIndexStation(
+        index: Int,
+        _nameTimeTable: Seq[((String, String), Seq[(String, String)])]
+    ): Seq[((String, String), Seq[(String, String)])] = {
+      if (index > 0) {
+        _nameTimeTable
+          .sortWith((a, b) => {
+            val aVal =
+              if (a._2(index)._2 != "") a._2(index)._2 else a._2(index)._1
+            val bVal =
+              if (b._2(index)._2 != "") b._2(index)._2 else b._2(index)._1
+            aVal < bVal
+          })
+      } else _nameTimeTable
+    }
+
+    var nameTimeTablePre2 = nameTimeTablePre
+    for (sortIndex <- sortIndexArray) {
+      nameTimeTablePre2 = sortByIndexStation(sortIndex, nameTimeTablePre2)
+    }
+    // 同値を削除する（すべての発着時刻を文字列に結合して比較）
+    val nameTimeTablePre3 =
+      nameTimeTablePre2.distinctBy(a => a._2.mkString(","))
+    val timeSeqSeq = for (nameTime <- nameTimeTablePre3) yield {
       nameTime._2
     }
-    val syubetsuDestSeq = for (nameTime <- nameTimeTablePre2) yield {
+    val syubetsuDestSeq = for (nameTime <- nameTimeTablePre3) yield {
       nameTime._1
     }
 
