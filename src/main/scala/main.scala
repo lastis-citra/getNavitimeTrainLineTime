@@ -2,12 +2,11 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 
 import scala.annotation.tailrec
-import scala.collection.{immutable, mutable}
+import scala.collection.mutable
 import scala.jdk.CollectionConverters._
 //import scalax.file.Path
 
-import java.io.FileOutputStream
-import java.io.OutputStreamWriter
+import java.io.{FileOutputStream, OutputStreamWriter}
 
 object Global {
   val USE = false
@@ -21,6 +20,7 @@ object Global {
   * arg4: ソートに利用したい中間駅名，コンマ区切り，省略可，省略しない場合はargs3必須
   * sbt run https://www.navitime.co.jp/diagram/timetable?node=00004848&lineId=00000123&trainType=&updown=0&time=2020-03-16 0 0
   * console, sbt shellともうまく動かないので設定で引数を指定してmainを実行すること
+  * terminalでsbtを打ってsbtに入ってから，run https://www.navitime.co.jp/diagram/timetable?node=00004848&lineId=00000123&trainType=&updown=0&time=2020-03-16 0 0 でもいける
   */
 object main {
   def main(args: Array[String]): Unit = {
@@ -165,13 +165,14 @@ object main {
       }
     }
 //    println(s"mCountSeq: $mCountSeq")
+    // 一番，時刻が入っている数が多い駅のインデックス
     val maxIndex = mCountSeq.indexOf(mCountSeq.max)
     println(s"maxIndex: $maxIndex, ${allNameSeq(maxIndex)}")
 
     // 種別，行き先も一緒に並び替え，削除するために一度結合する
     val nameTimeTablePre = syubetsuDestSeqPre.zip(timeSeqSeqPre)
 
-    // MaxIndexの発車時刻でソート，発車時刻がない場合は到着時刻
+    // sortTargetArrayが入力されている場合は，そちらを採用し，入力されていない場合はmaxIndexを採用する
     val sortIndexArray = if (sortTargetArray.length > 0) {
       for (sortTarget <- sortTargetArray) yield {
         allNameSeq.indexOf(sortTarget)
@@ -180,11 +181,12 @@ object main {
       Array(maxIndex)
     }
 
+    // Indexの発車時刻でソート，発車時刻がない場合は到着時刻
     def sortByIndexStation(
         index: Int,
         _nameTimeTable: Seq[((String, String), Seq[(String, String)])]
     ): Seq[((String, String), Seq[(String, String)])] = {
-      if (index > 0) {
+      if (index >= 0) {
         _nameTimeTable
           .sortWith((a, b) => {
             val aVal =
@@ -198,6 +200,7 @@ object main {
 
     var nameTimeTablePre2 = nameTimeTablePre
     for (sortIndex <- sortIndexArray) {
+      println(s"sortIndex: $sortIndex, ${allNameSeq(sortIndex)}")
       nameTimeTablePre2 = sortByIndexStation(sortIndex, nameTimeTablePre2)
     }
     // 同値を削除する（すべての発着時刻を文字列に結合して比較）
