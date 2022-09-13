@@ -10,3 +10,4 @@ bin/
 .bsp/
 .idea/
 result.csv
+tmp.csv
