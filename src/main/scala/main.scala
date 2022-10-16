@@ -390,8 +390,14 @@ object main {
           // 号数っぽい表記の場合はそちらを種別として選択
           val numberPattern = ".*[0-9]+号.*".r
           val shubetsu = numberPattern.findFirstMatchIn(shubetsu2) match {
-            case Some(_) => shubetsu2
-            case None    => liEle.attr("data-name")
+            case Some(_) => {
+              val numberPattern2 = "[0-9]+号.*".r
+              val numberString =
+                numberPattern2.findFirstMatchIn(shubetsu2).get.toString
+              val shubetsuName = shubetsu2.replace(numberString, "")
+              s"""\"$shubetsuName\n$numberString\""""
+            }
+            case None => liEle.attr("data-name")
           }
 
           //println(shubetsu)
