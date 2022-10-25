@@ -256,13 +256,14 @@ object main {
     val syubetsuDestTimeSeqSeq = syubetsuDestSeq.zip(timeSeqSeq2)
 
     // ファイル出力用，最初に前のファイルを削除
+    val result_encode = "SHIFT_JIS"
     val fileName = "result.csv"
     val fileOutPutStreamPre = new FileOutputStream(fileName, false)
-    val writerPre = new OutputStreamWriter(fileOutPutStreamPre, encode)
+    val writerPre = new OutputStreamWriter(fileOutPutStreamPre, result_encode)
     writerPre.close()
 
     val fileOutPutStream = new FileOutputStream(fileName, true)
-    val writer = new OutputStreamWriter(fileOutPutStream, encode)
+    val writer = new OutputStreamWriter(fileOutPutStream, result_encode)
 
     def printAndWrite(writer: OutputStreamWriter, str: String): Unit = {
       writer.write(str)
