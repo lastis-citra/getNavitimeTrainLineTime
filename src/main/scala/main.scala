@@ -267,7 +267,8 @@ object main {
 
     def printAndWrite(writer: OutputStreamWriter, str: String): Unit = {
       writer.write(str)
-      print(str)
+      // print(str)
+      Console.out.write(str.getBytes("MS932")) // Shift_JIS互換
     }
 
     // 表示用
@@ -376,7 +377,8 @@ object main {
     println(dlEles.size())
     // ～時台，ごとに切り出す
     val nameTimeTupleListListBuf = for (dlEle <- dlEles.asScala) yield {
-      println(dlEle.text)
+      // println(dlEle.text)
+      Console.out.write((dlEle.text + "\n").getBytes("MS932"))// Shift_JIS互換
       val liEles = dlEle.child(1).child(0).children
       // 時刻1つ，ごとに切り出す
       val nameTimeTupleListBuf =
